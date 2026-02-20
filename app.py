@@ -2,210 +2,125 @@ import streamlit as st
 import pandas as pd
 import sqlite3
 import plotly.express as px
-import hashlib
-import os
 import time
 from datetime import datetime
 
-# --- 1. SECURITY & DATABASE ARCHITECTURE ---
-def hash_code(password):
-    return hashlib.sha256(str.encode(password)).hexdigest()
+# --- 1. PROJECT CONFIGURATION ---
+PROJECT_NAME = "RajaRao Legal Suite - v1.5 (Secure Basic)"
+ADMIN_USER = "rajarao"
+ADMIN_PASS = "chamber123"
 
+# --- 2. DATABASE ENGINE ---
 def init_db():
-    conn = sqlite3.connect('rajarao_chamber_final.db', check_same_thread=False)
+    conn = sqlite3.connect('rajarao_v1_chamber.db', check_same_thread=False)
     cursor = conn.cursor()
-    # Unified Table for Cases, Strategy, and Finance
     cursor.execute('''CREATE TABLE IF NOT EXISTS cases 
         (id INTEGER PRIMARY KEY, case_id TEXT, petitioner TEXT, respondent TEXT, 
-        court TEXT, section_bns TEXT, strategy_notes TEXT, 
-        total_fee REAL, paid_fee REAL)''')
-    # Hearings
-    cursor.execute('''CREATE TABLE IF NOT EXISTS hearings 
-        (id INTEGER PRIMARY KEY, case_id TEXT, hearing_date DATE, purpose TEXT)''')
+        court TEXT, rating TEXT, total_fee REAL)''')
     conn.commit()
     return conn
 
-def backup_to_csv():
-    try:
-        conn = sqlite3.connect('rajarao_chamber_final.db')
-        df = pd.read_sql_query("SELECT * FROM cases", conn)
-        df.to_csv("CHAMBER_BACKUP_LOG.csv", index=False)
-        return True
-    except:
-        return False
-
 db_conn = init_db()
 
-# --- 2. PREMIUM ENTERPRISE UI (CSS) ---
-st.set_page_config(page_title="RajaRao Legal Suite Pro", page_icon="⚖️", layout="wide")
+# --- 3. PREMIUM UI & LOGIN PAGE ---
+st.set_page_config(page_title=PROJECT_NAME, page_icon="⚖️", layout="wide")
 
 st.markdown("""
     <style>
-    .stApp { background: radial-gradient(circle at top right, #1e293b, #020617); color: #f8fafc; }
-    .gold-title {
+    .stApp { background-color: #0f172a; color: #f8fafc; }
+    .gold-header {
         background: linear-gradient(to right, #BF953F, #FCF6BA, #B38728);
         -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        font-weight: 800; text-align: center; font-size: 3.5rem; filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.3));
-    }
-    .login-card {
-        background: rgba(255, 255, 255, 0.05); padding: 40px; border-radius: 20px; 
-        border: 1px solid #BF953F; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    }
-    .stButton>button {
-        background: linear-gradient(45deg, #d4af37, #996515);
-        color: white !important; font-weight: bold; border-radius: 8px; width: 100%; border: none;
-    }
-    .strategy-vault {
-        background: rgba(191, 149, 63, 0.05); border-left: 5px solid #BF953F;
-        padding: 15px; margin: 10px 0; font-style: italic; color: #FCF6BA;
+        font-weight: 800; text-align: center; font-size: 3rem;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. LOGIN GATEKEEPER ---
-if 'authenticated' not in st.session_state:
-    st.session_state.authenticated = False
+# LOGIN LOGIC
+if 'login_status' not in st.session_state:
+    st.session_state.login_status = False
 
-if not st.session_state.authenticated:
-    _, center, _ = st.columns([1, 2, 1])
-    with center:
-        st.markdown("<div class='gold-title'>ADVOCATE RAJARAO</div>", unsafe_allow_html=True)
-        st.markdown("<div class='login-card'>", unsafe_allow_html=True)
-        st.markdown("### 🔐 Senior Counsel Authentication")
-        user_id = st.text_input("Chamber ID", value="SENIOR-ADMIN")
-        access_key = st.text_input("Encryption Key", type="password")
-        mfa = st.text_input("MFA Token (Demo: 123456)")
-        
-        if st.button("DECRYPT & ENTER CHAMBER"):
-            # Master Password: admin123 | MFA: 123456
-            if hash_code(access_key) == hash_code("admin123") and mfa == "123456":
-                st.session_state.authenticated = True
-                st.success("Identity Verified. Accessing Sovereign Vault...")
+if not st.session_state.login_status:
+    st.markdown(f"<div class='gold-header'>{PROJECT_NAME}</div>", unsafe_allow_html=True)
+    _, col2, _ = st.columns([1, 1, 1])
+    with col2:
+        st.subheader("🔐 Chamber Login")
+        user = st.text_input("Username")
+        pwd = st.text_input("Password", type="password")
+        if st.button("Access Vault"):
+            if user == ADMIN_USER and pwd == ADMIN_PASS:
+                st.session_state.login_status = True
+                st.success("Access Granted!")
                 time.sleep(1)
                 st.rerun()
             else:
-                st.error("Invalid Credentials. Access Denied.")
-        st.markdown("</div>", unsafe_allow_html=True)
+                st.error("Invalid Credentials")
     st.stop()
 
-# --- 4. MAIN APPLICATION INTERFACE ---
+# --- 4. MAIN APPLICATION (Post Login) ---
 with st.sidebar:
-    st.image("https://img.icons8.com/fluency/96/law.png", width=60)
-    st.markdown("### 🏛️ Management")
-    menu = st.radio("Modules:", ["📊 Dashboard", "🔍 Conflict Search", "📅 Board Position", "📖 BNS Bridge", "🧠 Strategy & Billing"])
+    st.markdown(f"### 🏛️ {PROJECT_NAME}")
+    st.write(f"Welcome, **Adv. RajaRao**")
+    menu = st.radio("Chamber Modules", ["📊 Dashboard", "➕ New Case Entry"])
     st.divider()
-    if st.button("SECURE LOGOUT"):
-        st.session_state.authenticated = False
+    if st.button("Logout"):
+        st.session_state.login_status = False
         st.rerun()
-    st.caption(f"System Time: {datetime.now().strftime('%H:%M:%S')}")
 
-# --- 5. CORE MODULE LOGIC ---
+# --- 5. MODULES ---
 
-# A. DASHBOARD
 if menu == "📊 Dashboard":
-    st.markdown("<div class='gold-title'>Chamber Command</div>", unsafe_allow_html=True)
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Active Files", db_conn.execute("SELECT COUNT(*) FROM cases").fetchone()[0])
-    m2.metric("Hearings Today", db_conn.execute("SELECT COUNT(*) FROM hearings WHERE hearing_date=date('now')").fetchone()[0])
-    m3.metric("BNS Sync", "100%", "Active")
-    m4.metric("Cloud Backup", "Online")
+    st.markdown("<div class='gold-header'>Chamber Intelligence</div>", unsafe_allow_html=True)
+    
+    df = pd.read_sql_query("SELECT * FROM cases", db_conn)
+    
+    if not df.empty:
+        # KPI Metrics
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Total Briefs", len(df))
+        high_priority = len(df[df['rating'] == "🔴 High Priority"])
+        m2.metric("Critical Cases", high_priority)
+        m3.metric("Billed Revenue", f"₹{df['total_fee'].sum():,.0f}")
 
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        st.markdown("#### 📅 Today's High-Priority Board")
-        h_df = pd.read_sql_query("SELECT case_id, hearing_date, purpose FROM hearings WHERE hearing_date >= date('now') LIMIT 5", db_conn)
-        st.table(h_df)
-    with col2:
-        st.markdown("#### 📊 Practice Mix")
-        df_chart = pd.read_sql_query("SELECT court, COUNT(*) as counts FROM cases GROUP BY court", db_conn)
-        if not df_chart.empty:
-            fig = px.pie(df_chart, values='counts', names='court', hole=.4, color_discrete_sequence=px.colors.sequential.Gold)
-            fig.update_layout(showlegend=False, height=250, margin=dict(t=0,b=0,l=0,r=0), paper_bgcolor='rgba(0,0,0,0)')
-            st.plotly_chart(fig, use_container_width=True)
-
-# B. CONFLICT SEARCH (Due Diligence)
-elif menu == "🔍 Conflict Search":
-    st.subheader("🔍 Due Diligence & Brief Onboarding")
-    with st.form("conflict_check"):
-        cid = st.text_input("Case ID")
-        pet = st.text_input("Petitioner")
-        res = st.text_input("Respondent")
-        crt = st.selectbox("Court", ["Supreme Court", "High Court", "District Court", "Tribunal"])
-        
-        if st.form_submit_button("Verify & Archive"):
-            # Ethics Check: Has respondent ever been our petitioner?
-            conflict = pd.read_sql_query(f"SELECT case_id FROM cases WHERE petitioner LIKE '%{res}%'", db_conn)
-            if not conflict.empty and res != "":
-                st.error(f"🚨 ETHICAL CONFLICT: You represented '{res}' in Case {conflict['case_id'].iloc[0]}.")
-            else:
-                db_conn.execute("INSERT INTO cases (case_id, petitioner, respondent, court) VALUES (?,?,?,?)", (cid, pet, res, crt))
-                db_conn.commit()
-                backup_to_csv()
-                st.success("No Conflict Found. Case Brief Secured.")
-
-# C. BOARD POSITION
-elif menu == "📅 Board Position":
-    st.subheader("📅 Judicial Board Position")
-    c1, c2 = st.columns([1, 2])
-    with c1:
-        cases = pd.read_sql_query("SELECT case_id FROM cases", db_conn)
-        sel = st.selectbox("Select Brief", cases['case_id'])
-        dt = st.date_input("Hearing Date")
-        purp = st.text_input("Purpose")
-        if st.button("Add to Cause List"):
-            db_conn.execute("INSERT INTO hearings (case_id, hearing_date, purpose) VALUES (?,?,?)", (sel, dt, purp))
-            db_conn.commit()
-            st.rerun()
-    with c2:
-        st.dataframe(pd.read_sql_query("SELECT * FROM hearings ORDER BY hearing_date ASC", db_conn), use_container_width=True)
-
-# D. BNS BRIDGE
-elif menu == "📖 BNS Bridge":
-    st.subheader("📖 BNS-IPC Comparative Bridge (2026)")
-    bns_map = pd.DataFrame({
-        "Offence": ["Murder", "Attempt to Murder", "Cheating", "Theft", "Defamation", "Unlawful Assembly"],
-        "IPC (Old)": ["302", "307", "420", "378", "499", "141"],
-        "BNS (New)": ["101", "109", "318", "303", "356", "189"]
-    })
-    st.table(bns_map)
-    st.info("The Bharatiya Nyaya Sanhita (BNS) has replaced the IPC. Use this bridge for 2026 drafting.")
-
-# E. STRATEGY & BILLING
-elif menu == "🧠 Strategy & Billing":
-    st.subheader("🧠 Senior Strategy & GST Billing")
-    cases = pd.read_sql_query("SELECT case_id, petitioner FROM cases", db_conn)
-    if not cases.empty:
-        sel_case = st.selectbox("Select Case Brief", cases['case_id'])
-        
-        # Strategy Section
-        st.markdown("<div class='strategy-vault'>", unsafe_allow_html=True)
-        note = st.text_area("Confidential Strategy (Chamber Secrets):")
-        if st.button("Save Strategy"):
-            db_conn.execute("UPDATE cases SET strategy_notes=? WHERE case_id=?", (note, sel_case))
-            db_conn.commit()
-        st.markdown("</div>", unsafe_allow_html=True)
-        
         st.divider()
-        # Billing Section
-        fee = st.number_input("Professional Fee (₹)", min_value=0.0)
-        if st.button("Generate GST Memo"):
-            total = fee * 1.18
-            st.markdown(f"""
-            <div style='border: 2px dashed #BF953F; padding: 20px; font-family: monospace;'>
-                <h3 style='text-align:center;'>MEMO OF FEES</h3>
-                <p>Case: {sel_case}</p>
-                <p>Net Fee: ₹{fee:,.2f}</p>
-                <p>GST (18%): ₹{fee*0.18:,.2f}</p>
-                <p><b>Grand Total: ₹{total:,.2f}</b></p>
-                <p style='text-align:right;'>Digitally Signed: Adv. RajaRao</p>
-            </div>
-            """, unsafe_allow_html=True)
-            db_conn.execute("UPDATE cases SET total_fee=? WHERE case_id=?", (total, sel_case))
-            db_conn.commit()
-            backup_to_csv()
-    else:
-        st.warning("Onboard a case first to access strategy and billing.")
+        # Case Distribution Chart
+        st.subheader("Court Analysis")
+        fig = px.pie(df, names='court', hole=0.4, color_discrete_sequence=px.colors.sequential.Gold)
+        fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', font_color="white")
+        st.plotly_chart(fig, use_container_width=True)
 
-# --- 6. FOOTER ---
-st.markdown("---")
-st.caption("© 2026 RajaRao Legal Suite | Advanced Enterprise Gold Edition | Secure Backup Enabled")
+        
+
+        # Detailed Registry
+        st.subheader("Active Case Registry")
+        st.dataframe(df, use_container_width=True)
+    else:
+        st.info("No records found in the chamber vault.")
+
+elif menu == "➕ New Case Entry":
+    st.subheader("📝 Brief Onboarding")
+    with st.form("new_case"):
+        c1, c2 = st.columns(2)
+        c_id = c1.text_input("Case Number")
+        pet = c2.text_input("Petitioner")
+        res = c1.text_input("Respondent")
+        crt = c2.selectbox("Court", ["Supreme Court", "High Court", "District Court", "Tribunals"])
+        
+        # Rating Column Integration
+        rat = st.select_slider("Case Priority Rating", 
+                              options=["🟢 Low Priority", "🟡 Medium Priority", "🔴 High Priority"])
+        
+        fee = st.number_input("Professional Fee (₹)", min_value=0.0)
+        
+        if st.form_submit_button("Secure Entry"):
+            if c_id and pet:
+                db_conn.execute("INSERT INTO cases (case_id, petitioner, respondent, court, rating, total_fee) VALUES (?,?,?,?,?,?)",
+                               (c_id, pet, res, crt, rat, fee))
+                db_conn.commit()
+                st.success(f"Case {c_id} has been encrypted and saved.")
+            else:
+                st.warning("Please fill essential details (Case ID & Petitioner).")
+
+# FOOTER
+st.divider()
+st.caption(f"© 2026 {PROJECT_NAME} | System Time: {datetime.now().strftime('%H:%M')}")
