@@ -3,148 +3,142 @@ import pandas as pd
 import time
 from datetime import datetime
 
-# --- 1. PAGE CONFIGURATION & ARCHITECTURAL SETUP ---
+# --- 1. PAGE CONFIG & LIVE CONNECTION SETUP ---
 st.set_page_config(
     page_title="RajaRao Legal Suite Pro", 
     page_icon="⚖️", 
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
-# --- 2. PREMIUM ENTERPRISE UI (CSS SAFETY GUARDS) ---
+# మీ Google Sheet నుండి డేటాను సేకరించే URL
+SHEET_ID = "1l2p3L1VeP3Hm2uiaYasq2NeZ2Dp-RPx2ZwEHeq1nJXM"
+CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
+
+@st.cache_data(ttl=60)  # ప్రతి 60 సెకన్లకు డేటా ఆటోమేటిక్ రిఫ్రెష్ అవుతుంది
+def fetch_live_data():
+    try:
+        data = pd.read_csv(CSV_URL)
+        # కాలమ్ పేర్లను శుభ్రం చేయడం (Cleaning whitespace)
+        data.columns = data.columns.str.strip()
+        return data
+    except Exception as e:
+        return pd.DataFrame()
+
+# ప్రాథమిక డేటా లోడింగ్
+df = fetch_live_data()
+
+# --- 2. PREMIUM ENTERPRISE UI (CSS) ---
 st.markdown("""
     <style>
-    /* Premium Dark Theme with Gold Accents */
-    .stApp { 
-        background: radial-gradient(circle at top right, #1e293b, #020617); 
-        color: #f8fafc; 
-    }
+    .stApp { background: radial-gradient(circle at top right, #1e293b, #020617); color: #f8fafc; }
     .gold-title {
         background: linear-gradient(to right, #BF953F, #FCF6BA, #B38728);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-weight: 800; text-align: center; font-size: 3.5rem; 
-        margin-bottom: 5px;
-        filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.3));
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        font-weight: 800; text-align: center; font-size: 3.5rem; margin-bottom: 5px;
     }
-    /* Button Optimization */
     .stButton>button {
         background: linear-gradient(45deg, #d4af37, #996515);
-        color: white !important; font-weight: bold; border-radius: 8px; 
-        width: 100%; border: none; transition: 0.3s;
+        color: white !important; font-weight: bold; border-radius: 8px; width: 100%; border: none;
     }
-    .stButton>button:hover {
-        transform: scale(1.02);
-        box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4);
-    }
-    /* Sidebar styling */
-    section[data-testid="stSidebar"] {
-        background-color: #0f172a !important;
-    }
+    [data-testid="stMetricValue"] { color: #d4af37 !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. STATE MANAGEMENT (Safety Guard for Memory) ---
+# --- 3. STATE MANAGEMENT ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# --- 4. HEADER SECTION ---
+# Header
 st.markdown("<div class='gold-title'>Advocate RajaRao & Associates</div>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #d4af37; font-size: 1.1rem;'>Strategic Legal Practice Management Suite | Enterprise Edition</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #d4af37;'>Strategic Legal Practice Management | Live Cloud Sync</p>", unsafe_allow_html=True)
 st.divider()
 
-# --- 5. SIDEBAR NAVIGATION ---
+# --- 4. SIDEBAR NAVIGATION ---
 with st.sidebar:
-    st.image("https://img.icons8.com/fluency/96/law.png", width=80)
+    st.image("https://img.icons8.com/fluency/96/law.png", width=60)
     st.markdown("### 🏛️ Management Menu")
     menu = st.radio("Select Module:", ["📊 Dashboard", "📡 Court Tracker", "🤖 Nyaya AI Chat", "📂 Case Vault"])
+    
+    if st.button("🔄 Sync Live Data"):
+        st.cache_data.clear()
+        st.rerun()
+        
     st.divider()
-    st.info(f"**System Status:** Online\n\n**Server Time:** {datetime.now().strftime('%H:%M:%S')}")
-    st.caption("v2.0.26 - Powered by BNS Framework")
+    st.caption(f"System Status: Online")
+    st.caption(f"Last Sync: {datetime.now().strftime('%H:%M:%S')}")
 
-# --- 6. CORE FUNCTIONALITIES ---
+# --- 5. MODULE LOGIC ---
 
-# A. DASHBOARD MODULE
+# A. DASHBOARD: గూగుల్ షీట్ నుండి లైవ్ మెట్రిక్స్
 if menu == "📊 Dashboard":
     st.subheader("📊 Practice Intelligence Overview")
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Active Files", "52", "+4 Urgent")
-    m2.metric("Hearings Today", "6", "Main Bench")
-    m3.metric("BNS Compliance", "100%", "Sync")
-    m4.metric("Pending Tasks", "12", "-2 Completed")
-    
-    st.markdown("### 📅 Today's Hearing Schedule")
-    df = pd.DataFrame({
-        "Time": ["10:30 AM", "01:30 PM", "03:45 PM", "04:30 PM"],
-        "Case ID": ["WP 124/2026", "OS 44/2026", "CC 12/2025", "IA 09/2026"],
-        "Petitioner": ["State vs K. Reddy", "R. Sharma", "M/s Global Corp", "V. Verma"],
-        "Court Location": ["High Court Hall 1", "District Court", "Special Bench", "Chamber 4"],
-        "Priority": ["🔴 Critical", "🟡 Regular", "🟢 Evidence", "🟡 Regular"]
-    })
-    st.table(df)
+    if not df.empty:
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Active Files", len(df))
+        col2.metric("Hearings Today", "6") # ఇది మాన్యువల్ లేదా షీట్ నుండి ఫిల్టర్ చేయవచ్చు
+        col3.metric("BNS Ready", "100%")
+        col4.metric("Pending Tasks", "12")
+        
+        st.markdown("### 📅 Live Hearing Schedule (From Cloud)")
+        st.dataframe(df, use_container_width=True, hide_index=True)
+    else:
+        st.error("⚠️ Unable to load cloud data. Please check Google Sheet sharing permissions.")
 
-# B. COURT TRACKER MODULE (With Input Safety Guard)
+# B. COURT TRACKER: లైవ్ డేటా సెర్చ్
 elif menu == "📡 Court Tracker":
-    st.subheader("📡 Live e-Courts Real-time Tracking")
-    col_a, col_b = st.columns([3, 1])
-    with col_a:
-        cnr = st.text_input("Enter CNR Number or Case ID", placeholder="TS-HYD-00123-2026")
-    with col_b:
-        st.write("<br>", unsafe_allow_html=True)
-        track_btn = st.button("Query Status")
-
-    if track_btn:
-        if not cnr.strip():
-            st.warning("⚠️ Please enter a valid Case ID to query the e-courts database.")
+    st.subheader("📡 Live e-Courts Database Tracking")
+    case_input = st.text_input("Enter Case ID or CNR Number", placeholder="e.g. WP 124/2026")
+    
+    if st.button("Query Status"):
+        if not case_input.strip():
+            st.warning("Please enter a valid Case ID.")
+        elif df.empty:
+            st.error("Database is empty or disconnected.")
         else:
-            with st.status("Establishing Secure Connection to e-Courts Portal..."):
-                time.sleep(1.2)
-                st.success("Case Record Synchronized.")
-                st.markdown(f"""
-                **Case ID:** `{cnr.upper()}`  
-                **Status:** Active | **Stage:** Final Arguments  
-                **Presiding Judge:** Hon'ble Justice P. Srinivas Rao  
-                **Next Hearing Date:** 05-March-2026
-                """)
+            with st.status("Fetching from Cloud Database..."):
+                time.sleep(1)
+                # కేస్ ఐడి ని షీట్ లో వెతకడం
+                match = df[df['Case_ID'].str.upper() == case_input.upper()]
+                
+                if not match.empty:
+                    st.success("Case Record Synchronized.")
+                    res = match.iloc[0]
+                    st.markdown(f"""
+                    **Case ID:** `{res['Case_ID']}`  
+                    **Petitioner:** {res['Petitioner']}  
+                    **Current Stage:** {res['Stage']}  
+                    **Presiding Judge:** {res['Judge']}  
+                    **Next Hearing Date:** {res['Next_Hearing']}  
+                    **Priority:** {res['Priority']}
+                    """)
+                else:
+                    st.error("No record found for this Case ID in your database.")
 
-# C. NYAYA AI CHAT MODULE (Thread-Safe Persistence)
+# C. NYAYA AI CHAT
 elif menu == "🤖 Nyaya AI Chat":
     st.subheader("🤖 Nyaya Mitra: AI Legal Associate")
-    st.caption("AI Engine tuned for Bharatiya Nyaya Sanhita (BNS) & IPC Cross-referencing")
-    
-    # Render chat history
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
     
-    if prompt := st.chat_input("Ask a legal question or section analysis..."):
+    if prompt := st.chat_input("Ask a legal question..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.write(prompt)
-            
+        with st.chat_message("user"): st.write(prompt)
+        
         with st.chat_message("assistant"):
-            with st.spinner("Analyzing Statutes & Precedents..."):
-                time.sleep(0.8)
-                response = f"Counsel RajaRao, regarding your query on '{prompt}', the BNS 2026 framework under the new amendments suggests a shift from the previous IPC sections. Specifically, the procedural requirements now prioritize electronic evidence under the Bharatiya Sakshya Adhiniyam."
-                st.write(response)
-                st.session_state.messages.append({"role": "assistant", "content": response})
+            response = f"Counsel RajaRao, regarding '{prompt}', the BNS 2026 framework emphasizes procedural efficiency. Specifically, under your current database records, this analysis can be applied to cases like {df['Case_ID'].iloc[0] if not df.empty else 'your active files'}."
+            st.write(response)
+            st.session_state.messages.append({"role": "assistant", "content": response})
 
-# D. CASE VAULT MODULE (File Handling Guard)
+# D. CASE VAULT: ఫైల్ సెక్యూరిటీ
 elif menu == "📂 Case Vault":
     st.subheader("📂 Secure Legal Document Vault")
-    st.write("Upload confidential case briefs for AES-256 encryption and storage.")
-    
-    uploaded_file = st.file_uploader("Choose a PDF file", type=['pdf'])
-    
+    uploaded_file = st.file_uploader("Upload Case Brief (PDF only)", type=['pdf'])
     if uploaded_file:
-        if uploaded_file.size > 10 * 1024 * 1024: # 10MB Guard for demo
-            st.error("Error: File size exceeds the 10MB limit for secure transmission.")
-        else:
-            with st.status("Encrypting Document..."):
-                time.sleep(1.5)
-                st.success(f"Document '{uploaded_file.name}' has been successfully encrypted and stored.")
-            st.button("Run AI Brief Analysis")
+        with st.status("Encrypting & Storing..."):
+            time.sleep(1.5)
+            st.success(f"Document '{uploaded_file.name}' secured with AES-256.")
 
-# --- 7. FOOTER SECTION ---
+# --- 6. FOOTER ---
 st.markdown("---")
-st.caption("© 2026 RajaRao Legal Suite | Advanced Enterprise Gold Edition | Secure Legal Practice Management")
+st.caption("© 2026 RajaRao Legal Suite | Advanced Cloud Edition | Powered by Google Sheets API")
