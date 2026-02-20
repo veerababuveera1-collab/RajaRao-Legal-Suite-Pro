@@ -1,150 +1,174 @@
 import streamlit as st
 import pandas as pd
+import sqlite3
+import plotly.express as px
 import time
 from datetime import datetime
 
-# --- 1. PAGE CONFIGURATION & ARCHITECTURAL SETUP ---
-st.set_page_config(
-    page_title="RajaRao Legal Suite Pro", 
-    page_icon="⚖️", 
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# --- 1. ARCHITECTURAL PERSISTENCE (SQLite) ---
+def init_db():
+    conn = sqlite3.connect('rajarao_senior_vault.db', check_same_thread=False)
+    cursor = conn.cursor()
+    # Case Ledger with Strategy and Financials
+    cursor.execute('''CREATE TABLE IF NOT EXISTS cases 
+        (id INTEGER PRIMARY KEY, case_id TEXT, petitioner TEXT, respondent TEXT, 
+        court TEXT, section_bns TEXT, strategy_notes TEXT, 
+        total_fee REAL, paid_fee REAL)''')
+    # Court Cause List
+    cursor.execute('''CREATE TABLE IF NOT EXISTS hearings 
+        (id INTEGER PRIMARY KEY, case_id TEXT, hearing_date DATE, purpose TEXT)''')
+    # Research Library for Juniors
+    cursor.execute('''CREATE TABLE IF NOT EXISTS research 
+        (id INTEGER PRIMARY KEY, title TEXT, citation TEXT, summary TEXT)''')
+    conn.commit()
+    return conn
 
-# --- 2. PREMIUM ENTERPRISE UI (CSS SAFETY GUARDS) ---
+db_conn = init_db()
+
+# --- 2. BNS-IPC MASTER TRANSLATOR (2026 Edition) ---
+bns_map = pd.DataFrame({
+    "Offence": ["Murder", "Attempt to Murder", "Cheating", "Theft", "Defamation", "Unlawful Assembly", "Conspiracy"],
+    "IPC (Old)": ["302", "307", "420", "378", "499", "141", "120B"],
+    "BNS (New)": ["101", "109", "318", "303", "356", "189", "61"]
+})
+
+# --- 3. PREMIUM SENIOR COUNSEL UI (CSS) ---
+st.set_page_config(page_title="RajaRao Senior Apex", page_icon="⚖️", layout="wide")
+
 st.markdown("""
     <style>
-    /* Premium Dark Theme with Gold Accents */
-    .stApp { 
-        background: radial-gradient(circle at top right, #1e293b, #020617); 
-        color: #f8fafc; 
-    }
-    .gold-title {
+    .stApp { background-color: #020617; color: #f8fafc; }
+    .gold-text {
         background: linear-gradient(to right, #BF953F, #FCF6BA, #B38728);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-weight: 800; text-align: center; font-size: 3.5rem; 
-        margin-bottom: 5px;
-        filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.3));
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        font-weight: 900; text-align: center; font-size: 3rem;
     }
-    /* Button Optimization */
-    .stButton>button {
-        background: linear-gradient(45deg, #d4af37, #996515);
-        color: white !important; font-weight: bold; border-radius: 8px; 
-        width: 100%; border: none; transition: 0.3s;
+    .chamber-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid #1e293b; padding: 20px; border-radius: 15px;
     }
-    .stButton>button:hover {
-        transform: scale(1.02);
-        box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4);
-    }
-    /* Sidebar styling */
-    section[data-testid="stSidebar"] {
-        background-color: #0f172a !important;
+    .strategy-vault {
+        background: rgba(191, 149, 63, 0.05); border-left: 5px solid #BF953F;
+        padding: 15px; margin: 10px 0; font-style: italic;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. STATE MANAGEMENT (Safety Guard for Memory) ---
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-# --- 4. HEADER SECTION ---
-st.markdown("<div class='gold-title'>Advocate RajaRao & Associates</div>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #d4af37; font-size: 1.1rem;'>Strategic Legal Practice Management Suite | Enterprise Edition</p>", unsafe_allow_html=True)
-st.divider()
-
-# --- 5. SIDEBAR NAVIGATION ---
+# --- 4. SIDEBAR (Command Menu) ---
 with st.sidebar:
-    st.image("https://img.icons8.com/fluency/96/law.png", width=80)
-    st.markdown("### 🏛️ Management Menu")
-    menu = st.radio("Select Module:", ["📊 Dashboard", "📡 Court Tracker", "🤖 Nyaya AI Chat", "📂 Case Vault"])
+    st.markdown("<h1 style='text-align: center;'>⚖️</h1>", unsafe_allow_html=True)
+    menu = st.radio("Navigation", 
+                    ["🏛️ Dashboard", "🔍 Conflict Search", "📅 Board Position", "📖 BNS Bridge", "🧠 Strategy & Billing", "📚 Research Vault"])
     st.divider()
-    st.info(f"**System Status:** Online\n\n**Server Time:** {datetime.now().strftime('%H:%M:%S')}")
-    st.caption("v2.0.26 - Powered by BNS Framework")
+    st.caption("Advocate RajaRao & Associates\nSenior Counsel Edition v6.5")
 
-# --- 6. CORE FUNCTIONALITIES ---
+# --- 5. FUNCTIONAL MODULES ---
 
-# A. DASHBOARD MODULE
-if menu == "📊 Dashboard":
-    st.subheader("📊 Practice Intelligence Overview")
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Active Files", "52", "+4 Urgent")
-    m2.metric("Hearings Today", "6", "Main Bench")
-    m3.metric("BNS Compliance", "100%", "Sync")
-    m4.metric("Pending Tasks", "12", "-2 Completed")
+# A. DASHBOARD
+if menu == "🏛️ Dashboard":
+    st.markdown("<div class='gold-text'>Chamber Command</div>", unsafe_allow_html=True)
     
-    st.markdown("### 📅 Today's Hearing Schedule")
-    df = pd.DataFrame({
-        "Time": ["10:30 AM", "01:30 PM", "03:45 PM", "04:30 PM"],
-        "Case ID": ["WP 124/2026", "OS 44/2026", "CC 12/2025", "IA 09/2026"],
-        "Petitioner": ["State vs K. Reddy", "R. Sharma", "M/s Global Corp", "V. Verma"],
-        "Court Location": ["High Court Hall 1", "District Court", "Special Bench", "Chamber 4"],
-        "Priority": ["🔴 Critical", "🟡 Regular", "🟢 Evidence", "🟡 Regular"]
-    })
-    st.table(df)
-
-# B. COURT TRACKER MODULE (With Input Safety Guard)
-elif menu == "📡 Court Tracker":
-    st.subheader("📡 Live e-Courts Real-time Tracking")
-    col_a, col_b = st.columns([3, 1])
-    with col_a:
-        cnr = st.text_input("Enter CNR Number or Case ID", placeholder="TS-HYD-00123-2026")
-    with col_b:
-        st.write("<br>", unsafe_allow_html=True)
-        track_btn = st.button("Query Status")
-
-    if track_btn:
-        if not cnr.strip():
-            st.warning("⚠️ Please enter a valid Case ID to query the e-courts database.")
-        else:
-            with st.status("Establishing Secure Connection to e-Courts Portal..."):
-                time.sleep(1.2)
-                st.success("Case Record Synchronized.")
-                st.markdown(f"""
-                **Case ID:** `{cnr.upper()}`  
-                **Status:** Active | **Stage:** Final Arguments  
-                **Presiding Judge:** Hon'ble Justice P. Srinivas Rao  
-                **Next Hearing Date:** 05-March-2026
-                """)
-
-# C. NYAYA AI CHAT MODULE (Thread-Safe Persistence)
-elif menu == "🤖 Nyaya AI Chat":
-    st.subheader("🤖 Nyaya Mitra: AI Legal Associate")
-    st.caption("AI Engine tuned for Bharatiya Nyaya Sanhita (BNS) & IPC Cross-referencing")
+    # Financial KPI
+    fin = db_conn.execute("SELECT SUM(total_fee), SUM(paid_fee) FROM cases").fetchone()
+    billed, paid = (fin[0] or 0), (fin[1] or 0)
     
-    # Render chat history
-    for msg in st.session_state.messages:
-        with st.chat_message(msg["role"]):
-            st.write(msg["content"])
-    
-    if prompt := st.chat_input("Ask a legal question or section analysis..."):
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.write(prompt)
-            
-        with st.chat_message("assistant"):
-            with st.spinner("Analyzing Statutes & Precedents..."):
-                time.sleep(0.8)
-                response = f"Counsel RajaRao, regarding your query on '{prompt}', the BNS 2026 framework under the new amendments suggests a shift from the previous IPC sections. Specifically, the procedural requirements now prioritize electronic evidence under the Bharatiya Sakshya Adhiniyam."
-                st.write(response)
-                st.session_state.messages.append({"role": "assistant", "content": response})
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Active Briefs", db_conn.execute("SELECT COUNT(*) FROM cases").fetchone()[0])
+    c2.metric("Hearings Today", db_conn.execute("SELECT COUNT(*) FROM hearings WHERE hearing_date=date('now')").fetchone()[0])
+    c3.metric("Billed (₹)", f"{billed/100000:.1f}L")
+    c4.metric("Collected (₹)", f"{paid/100000:.1f}L")
 
-# D. CASE VAULT MODULE (File Handling Guard)
-elif menu == "📂 Case Vault":
-    st.subheader("📂 Secure Legal Document Vault")
-    st.write("Upload confidential case briefs for AES-256 encryption and storage.")
-    
-    uploaded_file = st.file_uploader("Choose a PDF file", type=['pdf'])
-    
-    if uploaded_file:
-        if uploaded_file.size > 10 * 1024 * 1024: # 10MB Guard for demo
-            st.error("Error: File size exceeds the 10MB limit for secure transmission.")
-        else:
-            with st.status("Encrypting Document..."):
-                time.sleep(1.5)
-                st.success(f"Document '{uploaded_file.name}' has been successfully encrypted and stored.")
-            st.button("Run AI Brief Analysis")
+    st.markdown("### 📊 Caseload Analytics")
+    df_chart = pd.read_sql_query("SELECT court, COUNT(*) as count FROM cases GROUP BY court", db_conn)
+    if not df_chart.empty:
+        fig = px.bar(df_chart, x='court', y='count', color='count', color_continuous_scale='Oryel')
+        fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
+        st.plotly_chart(fig, use_container_width=True)
 
-# --- 7. FOOTER SECTION ---
+# B. CONFLICT SEARCH (Ethical Firewall)
+elif menu == "🔍 Conflict Search":
+    st.subheader("🔍 Due Diligence: Conflict of Interest Search")
+    with st.form("conflict_form"):
+        p_name = st.text_input("Prospective Petitioner")
+        r_name = st.text_input("Prospective Respondent")
+        c_id = st.text_input("Case Reference")
+        if st.form_submit_button("Run Search"):
+            # Logic: Has the new Respondent ever been our Client (Petitioner) before?
+            conflict = pd.read_sql_query(f"SELECT case_id, petitioner FROM cases WHERE petitioner LIKE '%{r_name}%'", db_conn)
+            if not conflict.empty and r_name != "":
+                st.error(f"🚨 CONFLICT DETECTED: You previously represented {r_name} in Case {conflict['case_id'].iloc[0]}.")
+            else:
+                st.success("✅ No direct conflict found in chamber history.")
+        
+        if st.form_submit_button("Finalize Onboarding"):
+            db_conn.execute("INSERT INTO cases (case_id, petitioner, respondent, court) VALUES (?,?,?,?)", (c_id, p_name, r_name, "Unassigned"))
+            db_conn.commit()
+
+# C. BOARD POSITION
+elif menu == "📅 Board Position":
+    st.subheader("📅 Judicial Board Position")
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        st.markdown("#### Schedule")
+        cases = pd.read_sql_query("SELECT case_id FROM cases", db_conn)
+        sel_c = st.selectbox("Brief", cases['case_id'])
+        h_dt = st.date_input("Date")
+        h_prp = st.text_input("Purpose")
+        if st.button("Add to Board"):
+            db_conn.execute("INSERT INTO hearings (case_id, hearing_date, purpose) VALUES (?,?,?)", (sel_c, h_dt, h_prp))
+            db_conn.commit()
+    with col2:
+        st.markdown("#### Cause List")
+        res = pd.read_sql_query("SELECT * FROM hearings ORDER BY hearing_date ASC", db_conn)
+        st.table(res)
+
+# D. BNS BRIDGE
+elif menu == "📖 BNS Bridge":
+    st.subheader("📖 2026 Statute Translator")
+    
+    st.write("Reference for transitioning from IPC 1860 to Bharatiya Nyaya Sanhita 2023.")
+    st.dataframe(bns_map, use_container_width=True, hide_index=True)
+
+# E. STRATEGY & BILLING
+elif menu == "🧠 Strategy & Billing":
+    st.subheader("🧠 Senior Counsel Chamber Secrets")
+    cases = pd.read_sql_query("SELECT case_id FROM cases", db_conn)
+    if not cases.empty:
+        sel = st.selectbox("Select Case", cases['case_id'])
+        
+        st.markdown("#### Strategic Pivots")
+        note = st.text_area("Confidential Strategy (Judge temperament, Witness vulnerabilities...)", height=150)
+        if st.button("Save Strategy"):
+            db_conn.execute("UPDATE cases SET strategy_notes=? WHERE case_id=?", (note, sel))
+            db_conn.commit()
+            st.toast("Strategy Archived.")
+
+        st.divider()
+        st.markdown("#### 🧾 Professional Fee Statement (GST 2026)")
+        c1, c2 = st.columns(2)
+        base_fee = c1.number_input("Base Fee (₹)", min_value=0.0)
+        gst_mode = c2.selectbox("GST Mechanism", ["Forward Charge (B2B)", "Reverse Charge (RCM)"])
+        gst_val = base_fee * 0.18 if "Forward" in gst_mode else 0
+        st.info(f"Grand Total: ₹{base_fee + gst_val:,.2f} (Includes GST: ₹{gst_val:,.2f})")
+        if st.button("Sync to Ledger"):
+            db_conn.execute("UPDATE cases SET total_fee=?, paid_fee=? WHERE case_id=?", (base_fee+gst_val, 0, sel))
+            db_conn.commit()
+
+# F. RESEARCH VAULT
+elif menu == "📚 Research Vault":
+    st.subheader("📚 Junior's Research Submission")
+    with st.form("research"):
+        title = st.text_input("Legal Proposition")
+        cit = st.text_input("Citation (AIR / SCC)")
+        summ = st.text_area("Ratio Decidendi")
+        if st.form_submit_button("Submit to Senior Counsel"):
+            db_conn.execute("INSERT INTO research (title, citation, summary) VALUES (?,?,?)", (title, cit, summ))
+            db_conn.commit()
+    
+    st.markdown("---")
+    res_lib = pd.read_sql_query("SELECT * FROM research", db_conn)
+    st.dataframe(res_lib, use_container_width=True)
+
+# --- 6. FOOTER ---
 st.markdown("---")
-st.caption("© 2026 RajaRao Legal Suite | Advanced Enterprise Gold Edition | Secure Legal Practice Management")
+st.caption("Adv. RajaRao Senior Suite | End-to-End Enterprise Control | BNS Framework 2026")
