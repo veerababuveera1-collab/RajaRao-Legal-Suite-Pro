@@ -17,21 +17,24 @@ BNS_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&
 
 st.set_page_config(page_title=PROJECT_NAME, page_icon="⚖️", layout="wide")
 
-# --- 2. LIVE CLOUD ENGINE ---
+# --- 2. LIVE CLOUD ENGINE (Clean Data) ---
 @st.cache_data(ttl=60)
-def fetch_cloud_data(url):
+def fetch_cloud_data(url, is_bns=False):
     try:
         data = pd.read_csv(url)
         data.columns = [c.strip() for c in data.columns]
+        # డూప్లికేట్స్ తొలగించే మ్యాజిక్ లాజిక్
+        if is_bns and 'BNS Section' in data.columns:
+            data = data.drop_duplicates(subset=['BNS Section'], keep='first')
         return data
-    except Exception:
+    except Exception as e:
         return pd.DataFrame()
 
 # Load Datasets
 df_court = fetch_cloud_data(COURT_URL)
-df_bns = fetch_cloud_data(BNS_URL)
+df_bns = fetch_cloud_data(BNS_URL, is_bns=True)
 
-# --- 3. PREMIUM ROYAL LAW CHAMBER THEME (CSS) ---
+# --- 3. PREMIUM DESIGNER STYLING (CSS) ---
 st.markdown("""
     <style>
     .stApp { background: radial-gradient(circle at top right, #0a0f1d, #020617); color: #f8fafc; font-family: 'Times New Roman', Times, serif; }
@@ -46,7 +49,6 @@ st.markdown("""
     .legal-card {
         background: rgba(255, 255, 255, 0.03);
         border-left: 5px solid #d4af37;
-        border-top: 1px solid rgba(212, 175, 55, 0.2);
         padding: 25px; border-radius: 0 15px 15px 0;
         box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         margin-bottom: 20px; backdrop-filter: blur(10px);
@@ -60,12 +62,14 @@ st.markdown("""
     .stButton>button {
         background: linear-gradient(135deg, #d4af37 0%, #aa771c 100%) !important;
         color: black !important; font-weight: bold !important; border: none !important;
-        transition: 0.3s;
+        transition: 0.3s; width: 100%;
     }
     .stButton>button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4) !important; }
 
     [data-testid="stSidebar"] { background-color: #050a16 !important; border-right: 1px solid #d4af37; }
-    div[data-testid="stDataFrame"] { border: 1px solid #d4af37; border-radius: 10px; }
+    
+    /* టేబుల్ డెకరేషన్ */
+    div[data-testid="stDataFrame"] { border: 1px solid #d4af37; border-radius: 10px; background: #050a16; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -95,15 +99,12 @@ with st.sidebar:
     st.markdown("<h1 style='color:#d4af37; text-align:center;'>🏛️ APEX PRO</h1>", unsafe_allow_html=True)
     st.write(f"Senior Counsel: **RajaRao**")
     st.divider()
-    menu = st.radio("Management Modules:", 
+    menu = st.radio("Navigation:", 
                     ["📊 Practice Intelligence", "📡 Live Court Tracker", 
                      "🤖 Nyaya AI Search", "⚖️ Smart Bail Calculator", "📂 Secure Vault"])
     st.divider()
     if st.button("🔄 Sync Cloud Data"):
         st.cache_data.clear()
-        st.rerun()
-    if st.button("Logout"):
-        st.session_state.auth_status = False
         st.rerun()
 
 # --- 6. CORE MODULES ---
@@ -113,81 +114,59 @@ if menu == "📊 Practice Intelligence":
     st.markdown("<div class='gold-title'>Practice Intelligence</div>", unsafe_allow_html=True)
     if not df_court.empty:
         c1, c2, c3 = st.columns(3)
-        c1.metric("Total Cases", len(df_court))
+        c1.metric("Total Active Files", len(df_court))
         c2.metric("Primary Court", "AP High Court")
-        c3.metric("System Status", "Live Syncing")
+        c3.metric("Security", "Encrypted")
         st.dataframe(df_court, use_container_width=True, hide_index=True)
     else:
-        st.error("Court data not found. Please sync cloud.")
+        st.error("Data not found. Please Sync Cloud.")
 
-# B. Live Court Tracker
-elif menu == "📡 Live Court Tracker":
-    st.markdown("<div class='gold-title'>Live Case Tracker</div>", unsafe_allow_html=True)
-    sq = st.text_input("🔍 Search Case ID, Petitioner, or Stage...")
-    if sq and not df_court.empty:
-        res = df_court[df_court.apply(lambda r: r.astype(str).str.contains(sq, case=False).any(), axis=1)]
-        st.dataframe(res, use_container_width=True, hide_index=True)
-
-# C. Nyaya AI Search
+# B. Nyaya AI Search (BNS/IPC Explorer)
 elif menu == "🤖 Nyaya AI Search":
     st.markdown("<div class='gold-title'>Nyaya AI Explorer</div>", unsafe_allow_html=True)
-    query = st.text_input("BNS Section, IPC, or Nature of Offence...", placeholder="Ex: 103, 302, Murder...")
+    q = st.text_input("Enter Section or Offence (Ex: 103, 302, Murder...)", placeholder="Search here...")
     
-    if query and not df_bns.empty:
-        results = df_bns[df_bns.apply(lambda row: row.astype(str).str.contains(query, case=False).any(), axis=1)]
+    if q and not df_bns.empty:
+        results = df_bns[df_bns.apply(lambda row: row.astype(str).str.contains(q, case=False).any(), axis=1)]
         if not results.empty:
+            # షీట్ లో ఉన్న హెడర్స్ ని ఇక్కడ ఆటోమేటిక్ గా ఫిల్టర్ చేస్తుంది
             cols = ['BNS Section', 'IPC Equivalent', 'Nature of Offence (నేరం స్వభావం)', 'Punishment (శిక్షా కాలం)']
-            existing_cols = [c for c in cols if c in df_bns.columns]
-            st.dataframe(results[existing_cols], use_container_width=True, hide_index=True)
+            available_cols = [c for c in cols if c in df_bns.columns]
+            st.dataframe(results[available_cols], use_container_width=True, hide_index=True)
             
+            # ఒక్క రిజల్ట్ మాత్రమే వస్తే దాన్ని హైలైట్ చేస్తుంది
             if len(results) == 1:
-                row = results.iloc[0]
+                r = results.iloc[0]
                 st.markdown(f"""<div class='legal-card'>
-                <span class='bns-badge'>BNS {row['BNS Section']}</span>
-                <h3 style='color:#d4af37;'>{row.get('Nature of Offence (నేరం స్వభావం)', 'Offence Details')}</h3>
-                <p><b>IPC Reference:</b> {row['IPC Equivalent']} | <b>Punishment:</b> {row.get('Punishment (శిక్షా కాలం)', 'N/A')}</p>
+                <span class='bns-badge'>BNS {r['BNS Section']}</span>
+                <h3 style='color:#d4af37;'>{r.get('Nature of Offence (నేరం స్వభావం)', 'Details')}</h3>
+                <p><b>IPC:</b> {r['IPC Equivalent']} | <b>Punishment:</b> {r.get('Punishment (శిక్షా కాలం)', 'Check Code')}</p>
                 </div>""", unsafe_allow_html=True)
 
-# D. Smart Bail Calculator (NEW FEATURE)
+# C. Smart Bail Calculator
 elif menu == "⚖️ Smart Bail Calculator":
     st.markdown("<div class='gold-title'>Bail & Limitation AI</div>", unsafe_allow_html=True)
-    col1, col2 = st.columns(2)
-    
-    with col1:
+    col_a, col_b = st.columns(2)
+    with col_a:
         st.markdown("<div class='legal-card'>", unsafe_allow_html=True)
-        st.subheader("🔍 Check Eligibility")
+        st.subheader("🔍 Check Offence Type")
         if not df_bns.empty:
-            bns_options = df_bns['BNS Section'].unique()
-            sec_pick = st.selectbox("Select BNS Section", bns_options)
-            off_row = df_bns[df_bns['BNS Section'] == sec_pick].iloc[0]
-            st.write(f"Offence: **{off_row.get('Nature of Offence (నేరం స్వభావం)', 'N/A')}**")
-            
-            # Simple Bail Logic based on offense keywords
-            if any(word in str(off_row).lower() for word in ['murder', 'rape', 'terror', 'life', 'death']):
-                st.error("🚨 NON-BAILABLE | Triable by Sessions")
+            sec_pick = st.selectbox("Select BNS Section", df_bns['BNS Section'].unique())
+            row = df_bns[df_bns['BNS Section'] == sec_pick].iloc[0]
+            st.write(f"Offence: **{row.get('Nature of Offence (నేరం స్వభావం)', 'N/A')}**")
+            if any(x in str(row).lower() for x in ['murder', 'rape', 'life', 'death']):
+                st.error("🚨 NON-BAILABLE")
             else:
-                st.success("✅ BAILABLE (General Procedure)")
+                st.success("✅ BAILABLE")
         st.markdown("</div>", unsafe_allow_html=True)
-
-    with col2:
+    with col_b:
         st.markdown("<div class='legal-card'>", unsafe_allow_html=True)
         st.subheader("⏳ BNSS 479 Statutory Bail")
-        max_term = st.number_input("Maximum Punishment for this offence (Years)", 1, 20, 7)
-        first_offender = st.checkbox("Is the accused a First-Time Offender?")
-        
-        ratio = 0.33 if first_offender else 0.50
-        st.metric("Eligible for Bail after completion of:", f"{max_term * ratio:.1f} Years")
-        st.caption(f"BNSS Section 479: {ratio*100:.0f}% of total punishment.")
+        years = st.number_input("Max Term (Years)", 1, 20, 7)
+        first_time = st.checkbox("First-time Offender?")
+        ratio = 0.33 if first_time else 0.50
+        st.metric("Eligible for Bail at:", f"{years * ratio:.1f} Years")
         st.markdown("</div>", unsafe_allow_html=True)
 
-# E. Secure Vault
-elif menu == "📂 Secure Vault":
-    st.markdown("<div class='gold-title'>Secure Vault</div>", unsafe_allow_html=True)
-    uploaded = st.file_uploader("Upload Brief (PDF)", type=['pdf'])
-    if uploaded:
-        with st.spinner("Encrypting..."):
-            time.sleep(1)
-            st.success(f"{uploaded.name} is now secured in the chamber vault.")
-
 st.markdown("---")
-st.caption(f"© 2026 RajaRao Legal Suite | v5.0 Royal Chamber Edition | {datetime.now().strftime('%d-%m-%Y %H:%M')}")
+st.caption(f"© 2026 RajaRao Legal Suite | v6.0 Royal Edition | {datetime.now().strftime('%d-%m-%Y %H:%M')}")
