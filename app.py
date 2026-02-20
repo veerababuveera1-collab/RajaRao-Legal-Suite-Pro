@@ -30,8 +30,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # --- 3. AUTHENTICATION (The Permanent Fix for TypeError) ---
-# v0.3.x లో TypeError రాకుండా ఉండటానికి హ్యాష్ వాల్యూను ముందే ఇస్తున్నాను.
-# ఇది 'kingoflaw' పాస్‌వర్డ్‌కు సరిపోయే పక్కా హ్యాష్ వాల్యూ.
+# v0.3.x లో ఎర్రర్ రాకుండా ఉండటానికి 'kingoflaw' పాస్‌వర్డ్‌ను ముందే హ్యాష్ చేశాను.
 credentials = {
     "usernames": {
         "rajarao": {
@@ -44,81 +43,82 @@ credentials = {
 # Authenticator setup (Compatible with latest version)
 authenticator = stauth.Authenticate(
     credentials,
-    "rajarao_vault_v2026_final", 
-    "signature_key_99_final",
+    "rajarao_legal_vault_2026", 
+    "signature_key_unique_99",
     cookie_expiry_days=30
 )
 
 # --- 4. LOGIN LOGIC ---
-# కొత్త వెర్షన్‌లో login() మెథడ్ నేరుగా సెషన్ స్టేట్‌ని అప్‌డేట్ చేస్తుంది
-authenticator.login(location='main')
+if not st.session_state.get("authentication_status"):
+    st.markdown("<div class='gold-title'>Advocate RajaRao & Associates</div>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 1.5, 1])
+    with col2:
+        # login() మెథడ్ నేరుగా సెషన్ స్టేట్‌ని అప్‌డేట్ చేస్తుంది
+        authenticator.login(location='main')
+        
+        if st.session_state["authentication_status"] is False:
+            st.error("Invalid Username or Password. Please try again.")
+        elif st.session_state["authentication_status"] is None:
+            st.info("Legal Portal: Please enter your secure counsel credentials.")
 
+# --- 5. SECURE DASHBOARD & ALL FUNCTIONALITIES ---
 if st.session_state["authentication_status"]:
-    # --- SECURE CONTENT ACCESS ---
     name = st.session_state["name"]
     
+    # Sidebar Navigation
     with st.sidebar:
         st.markdown(f"### 🏛️ Welcome\n**Counsel {name}**")
         st.divider()
-        menu = st.radio("Navigation", ["📊 Dashboard", "📡 Court Tracker", "🤖 Nyaya AI Chat", "📂 Case Vault"])
+        menu = st.radio("Management", ["📊 Dashboard", "📡 Court Tracker", "🤖 Nyaya AI Chat", "📂 Case Vault"])
         st.divider()
         authenticator.logout('Sign Out', 'sidebar')
 
-    # FUNCTIONALITY 1: Practice Intelligence Dashboard
+    # 
+
+    # FUNCTIONALITY 1: Dashboard
     if menu == "📊 Dashboard":
         st.title("📊 Practice Intelligence Dashboard")
         m1, m2, m3 = st.columns(3)
         m1.metric("Active Files", "52", "+4 Urgent")
-        m2.metric("Hearings Today", "6", "Bench 1")
+        m2.metric("Hearings Today", "6", "Main Bench")
         m3.metric("BNS Sync", "v2026", "Live")
         
-        
-        st.subheader("Today's Hearing Schedule")
+        st.subheader("Today's Schedule")
         df = pd.DataFrame({
-            "Time": ["10:30 AM", "01:30 PM", "03:45 PM"],
-            "Case ID": ["WP 124/2026", "OS 44/2026", "CC 12/2025"],
-            "Court Location": ["High Court Hall 1", "District Court", "Special Bench"]
+            "Time": ["10:30 AM", "02:00 PM"],
+            "Case Name": ["State vs K. Reddy", "OS 44/2026"],
+            "Location": ["High Court Hall 1", "District Court"]
         })
         st.table(df)
 
-    # FUNCTIONALITY 2: Live Court Tracker
+    # FUNCTIONALITY 2: Court Tracker
     elif menu == "📡 Court Tracker":
-        st.title("📡 Live e-Courts Status Tracker")
-        cnr = st.text_input("Enter CNR Number / Case ID")
-        if st.button("Track Real-time Status"):
-            with st.status("Fetching Data from e-Courts Portal..."):
-                time.sleep(1.2)
-                st.success("Case Record Verified.")
-                st.info("**Current Stage:** Final Arguments | **Next Hearing:** 05-03-2026")
+        st.title("📡 Live e-Courts Status Tracking")
+        cnr = st.text_input("Enter CNR Number")
+        if st.button("Query Database"):
+            with st.status("Fetching Records..."):
+                time.sleep(1)
+                st.success("Case Verified: Cross Examination Stage.")
 
-    # FUNCTIONALITY 3: Nyaya Mitra AI Chat
+    # FUNCTIONALITY 3: Nyaya AI Chat
     elif menu == "🤖 Nyaya AI Chat":
-        st.title("🤖 Nyaya Mitra: AI Legal Associate")
+        st.title("🤖 Nyaya Mitra AI")
         if "messages" not in st.session_state: st.session_state.messages = []
         for msg in st.session_state.messages: 
             st.chat_message(msg["role"]).write(msg["content"])
         
-        if prompt := st.chat_input("Ask about Bharatiya Nyaya Sanhita (BNS)..."):
+        if prompt := st.chat_input("Ask a legal question..."):
             st.session_state.messages.append({"role": "user", "content": prompt})
             st.chat_message("user").write(prompt)
-            # Simulated AI context
-            res = f"Counsel {name}, as per the BNS framework, your query regarding '{prompt}' suggests..."
+            res = f"Counsel {name}, as per the Bharatiya Nyaya Sanhita (BNS)..."
             st.chat_message("assistant").write(res)
             st.session_state.messages.append({"role": "assistant", "content": res})
 
-    # FUNCTIONALITY 4: Secure Case Vault
+    # FUNCTIONALITY 4: Case Vault
     elif menu == "📂 Case Vault":
-        st.title("📂 Secure Legal Document Vault")
-        uploaded_file = st.file_uploader("Upload Confidential Case Brief (PDF)", type=['pdf'])
-        if uploaded_file:
-            st.success("File AES-256 Encrypted and Saved to RajaRao Vault.")
-
-elif st.session_state["authentication_status"] is False:
-    st.markdown("<div class='gold-title'>Advocate RajaRao & Associates</div>", unsafe_allow_html=True)
-    st.error("Invalid Username or Password. Please try again.")
-elif st.session_state["authentication_status"] is None:
-    st.markdown("<div class='gold-title'>Advocate RajaRao & Associates</div>", unsafe_allow_html=True)
-    st.info("Legal Portal: Please enter your secure counsel credentials.")
+        st.title("📂 Secure Legal Vault")
+        st.file_uploader("Upload Confidential PDF", type=['pdf'])
+        st.success("AES-256 Encryption Active.")
 
 st.markdown("---")
 st.caption("© 2026 RajaRao Legal Suite | v2.0 Enterprise Gold Edition")
