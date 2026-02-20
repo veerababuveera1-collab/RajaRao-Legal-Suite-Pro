@@ -4,51 +4,16 @@ import pandas as pd
 import time
 from datetime import datetime
 
-# --- 1. PAGE CONFIGURATION ---
+# --- 1. PAGE SETUP & PERFORMANCE ---
 st.set_page_config(
     page_title="RajaRao Legal Suite Pro",
     page_icon="⚖️",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
-# --- 2. ADVANCED STYLING (Mind-Blowing UI) ---
-st.markdown("""
-    <style>
-    /* Main Background */
-    .stApp {
-        background-color: #0e1117;
-        color: #e0e0e0;
-    }
-    /* Gold Gradient Buttons */
-    .stButton>button {
-        background: linear-gradient(45deg, #d4af37, #f9e27d);
-        color: #000;
-        border: none;
-        font-weight: bold;
-        border-radius: 8px;
-        transition: 0.3s;
-    }
-    .stButton>button:hover {
-        transform: scale(1.02);
-        box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4);
-    }
-    /* Metric Cards */
-    [data-testid="stMetric"] {
-        background-color: #161b22;
-        border-radius: 12px;
-        padding: 20px;
-        border: 1px solid #30363d;
-    }
-    /* Sidebar Styling */
-    section[data-testid="stSidebar"] {
-        background-color: #161b22 !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-# --- 3. AUTHENTICATION SETUP (Fixed & Fast) ---
+# --- 2. AUTHENTICATION CONFIG (v0.3.x Compatible) ---
 # Pre-hashed passwords for 'kingoflaw' and 'justice2026'
+# ఇక్కడ పాస్‌వర్డ్‌లను హ్యాష్ చేసి ఇవ్వడం వల్ల TypeError రాదు మరియు స్పీడ్ పెరుగుతుంది
 usernames = ["rajarao", "associate"]
 names = ["Senior Advocate RajaRao", "Associate Counsel"]
 hashed_passwords = [
@@ -65,98 +30,99 @@ credentials = {
     }
 }
 
-# Cookie name and key for persistent login
+# Authenticator Initialize
 authenticator = stauth.Authenticate(
     credentials,
-    "rajarao_legal_vault",
-    "auth_key_2026",
+    "rajarao_vault_v6", # Cookie Name
+    "signature_key_2026", # Cookie Key
     cookie_expiry_days=30
 )
 
-# --- 4. LOGIN LOGIC ---
-name, auth_status, username = authenticator.login(location='main')
+# --- 3. LOGIN INTERFACE ---
+# గమనిక: కొత్త వెర్షన్‌లో login() వాల్యూస్‌ని రిటర్న్ చేయదు (No assignment like name, status = ...)
+authenticator.login(location='main')
 
-if auth_status:
+# సెషన్ స్టేట్ ద్వారా అథెంటికేషన్ చెక్ చేయాలి
+if st.session_state["authentication_status"]:
+    
+    # User Details from Session State
+    name = st.session_state["name"]
+    username = st.session_state["username"]
+
     # --- SIDEBAR NAVIGATION ---
     with st.sidebar:
-        st.image("https://cdn-icons-png.flaticon.com/512/3503/3503786.png", width=100)
-        st.title("RajaRao & Associates")
-        st.markdown("*Legacy of Justice*")
+        st.image("https://cdn-icons-png.flaticon.com/512/3503/3503786.png", width=90)
+        st.markdown(f"### Welcome\n**Counsel {name}**")
         st.divider()
-        choice = st.radio("Navigation", ["📊 Dashboard", "⚖️ Case Management", "🤖 Nyaya AI Chat", "📂 Documents"])
+        choice = st.radio("Management Menu", ["📊 Dashboard", "📡 Court Status", "🤖 Nyaya AI Chat", "📂 Vault"])
         st.divider()
         authenticator.logout('Logout', 'sidebar')
 
-    # --- DASHBOARD ---
+    # --- DASHBOARD SECTION ---
     if choice == "📊 Dashboard":
-        st.title(f"Welcome, {name}")
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Active Cases", "48", "+3 New")
+        st.title("Practice Overview")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Active Files", "48", "+2 Urgent")
         c2.metric("Hearings Today", "5", "High Priority")
-        c3.metric("Closed Cases", "1,240", "98% Success")
-        c4.metric("AI Research", "Active", "v5.0")
-        
+        c3.metric("BNS Sync", "v2026", "Updated")
+
         
 
-        st.subheader("Upcoming Hearings (Next 24 Hours)")
-        data = {
-            "Case Number": ["OS 124/2024", "WP 998/2025", "CC 45/2023"],
-            "Court": ["High Court", "District Court", "Supreme Court"],
-            "Timing": ["10:30 AM", "11:45 AM", "02:00 PM"]
-        }
-        st.table(pd.DataFrame(data))
+        st.subheader("Daily Calendar")
+        df = pd.DataFrame({
+            "Time": ["10:30 AM", "02:00 PM", "04:30 PM"],
+            "Case ID": ["WP 124/2026", "OS 99/2025", "CC 45/2024"],
+            "Court": ["High Court", "District Court", "Supreme Court"]
+        })
+        st.table(df)
 
-    # --- CASE MANAGEMENT (TABS) ---
-    elif choice == "⚖️ Case Management":
-        st.title("Case Control Center")
-        tab1, tab2, tab3 = st.tabs(["📡 Live Tracking", "🔄 IPC/BNS Bridge", "🏛️ Court Directory"])
-        
-        with tab1:
-            st.subheader("Real-time Case Status")
-            cnr = st.text_input("Enter CNR Number")
-            if st.button("Fetch Live Data"):
-                with st.spinner("Connecting to e-Courts Database..."):
-                    time.sleep(1.5)
-                    st.success("Case Found: Hearing Stage - Evidence Presentation")
-                    
-        with tab2:
-            st.subheader("Law Converter")
-            st.info("Quickly map old IPC sections to new BNS statutes.")
-            old_sec = st.selectbox("Select IPC Section", ["302 (Murder)", "420 (Cheating)", "376 (Rape)"])
-            mapping = {"302 (Murder)": "BNS Section 101", "420 (Cheating)": "BNS Section 316", "376 (Rape)": "BNS Section 63"}
-            st.write(f"### Equivalent: **{mapping[old_sec]}**")
+    # --- COURT STATUS SECTION ---
+    elif choice == "📡 Court Status":
+        st.title("Real-time Case Tracking")
+        case_id = st.text_input("Enter Case Number / CNR")
+        if st.button("Track Status"):
+            with st.spinner("Connecting to e-Courts..."):
+                time.sleep(1)
+                st.success("Record Found!")
+                st.info("**Current Stage:** Final Arguments\n\n**Next Date:** 25th Feb 2026")
 
-    # --- NYAYA AI CHAT ---
+    # --- NYAYA AI CHAT SECTION ---
     elif choice == "🤖 Nyaya AI Chat":
-        st.title("Nyaya Mitra AI Associate")
-        if "messages" not in st.session_state:
-            st.session_state.messages = []
-
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
-
-        if prompt := st.chat_input("Ask a legal question (e.g., Grounds for anticipatory bail)"):
+        st.title("Nyaya Mitra: AI Associate")
+        if "messages" not in st.session_state: st.session_state.messages = []
+        
+        for msg in st.session_state.messages:
+            st.chat_message(msg["role"]).write(msg["content"])
+            
+        if prompt := st.chat_input("Ask about BNS vs IPC or Case Precedents..."):
             st.session_state.messages.append({"role": "user", "content": prompt})
-            with st.chat_message("user"): st.markdown(prompt)
-
-            with st.chat_message("assistant"):
-                response = f"Counsel {name}, based on recent precedents under BNS, your query regarding '{prompt}' suggests focusing on procedural delays..."
-                st.markdown(response)
+            st.chat_message("user").write(prompt)
+            
+            # AI Logic (Simulated for Speed)
+            response = f"Counsel {name}, based on the new Bharatiya Nyaya Sanhita (BNS), your query '{prompt}' refers to..."
+            st.chat_message("assistant").write(response)
             st.session_state.messages.append({"role": "assistant", "content": response})
 
-    # --- DOCUMENTS ---
-    elif choice == "📂 Documents":
-        st.title("Secure Document Vault")
-        up = st.file_uploader("Upload Case File (Encrypted)", type=['pdf', 'docx'])
+    # --- VAULT SECTION ---
+    elif choice == "📂 Vault":
+        st.title("Secure Document Repository")
+        up = st.file_uploader("Upload Confidential Briefs", type=['pdf', 'docx'])
         if up:
-            st.success("File uploaded and analyzed by AI.")
-            st.download_button("📥 Download Case Summary", "AI generated summary content", file_name="Case_Brief.txt")
+            st.success("File encrypted and stored.")
+            st.download_button("📥 Download Analysis", "AI Brief Content", file_name="RajaRao_Brief.txt")
 
-elif auth_status == False:
+elif st.session_state["authentication_status"] is False:
     st.error('Username/password is incorrect')
-elif auth_status == None:
-    st.warning('Please enter your credentials to access the RajaRao Legal Suite.')
+elif st.session_state["authentication_status"] is None:
+    # --- STYLING THE LOGIN BOX ---
+    st.markdown("<h1 style='text-align: center; color: #D4AF37;'>Advocate RajaRao & Associates</h1>", unsafe_allow_html=True)
+    st.warning('Please log in using your secure counsel credentials.')
 
-st.divider()
-st.caption("© 2026 Advocate RajaRao & Associates | Secure Legal ERP v5.0")
+# --- GLOBAL STYLING ---
+st.markdown("""
+    <style>
+    .stApp { background-color: #0e1117; }
+    [data-testid="stMetricValue"] { color: #d4af37 !important; }
+    .stButton>button { width: 100%; }
+    </style>
+    """, unsafe_allow_html=True)
