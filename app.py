@@ -4,7 +4,7 @@ import time
 from datetime import datetime
 
 # --- 1. PROJECT CONFIGURATION ---
-PROJECT_NAME = "RajaRao Legal Suite v2.5 (Apex Pro)"
+PROJECT_NAME = "RajaRao Legal Suite"
 SHEET_ID = "1l2p3L1VeP3Hm2uiaYasq2NeZ2Dp-RPx2ZwEHeq1nJXM"
 GID = "906893272"  # మీ నిర్దిష్ట ట్యాబ్ ఐడి
 CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID}"
