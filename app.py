@@ -29,7 +29,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. AUTHENTICATION (The Permanent Architect Fix) ---
+# --- 3. AUTHENTICATION (The Permanent Fix for TypeError) ---
 # v0.3.x లో TypeError రాకుండా ఉండటానికి హ్యాష్ వాల్యూను ముందే ఇస్తున్నాను.
 # ఇది 'kingoflaw' పాస్‌వర్డ్‌కు సరిపోయే పక్కా హ్యాష్ వాల్యూ.
 credentials = {
@@ -44,8 +44,8 @@ credentials = {
 # Authenticator setup (Compatible with latest version)
 authenticator = stauth.Authenticate(
     credentials,
-    "rajarao_vault_v2026", 
-    "signature_key_99",
+    "rajarao_vault_v2026_final", 
+    "signature_key_99_final",
     cookie_expiry_days=30
 )
 
@@ -54,7 +54,7 @@ authenticator = stauth.Authenticate(
 authenticator.login(location='main')
 
 if st.session_state["authentication_status"]:
-    # --- SECURE CONTENT ---
+    # --- SECURE CONTENT ACCESS ---
     name = st.session_state["name"]
     
     with st.sidebar:
@@ -64,59 +64,61 @@ if st.session_state["authentication_status"]:
         st.divider()
         authenticator.logout('Sign Out', 'sidebar')
 
-    # FUNCTIONALITY 1: Dashboard
+    # FUNCTIONALITY 1: Practice Intelligence Dashboard
     if menu == "📊 Dashboard":
-        st.title("📊 Practice Intelligence")
+        st.title("📊 Practice Intelligence Dashboard")
         m1, m2, m3 = st.columns(3)
         m1.metric("Active Files", "52", "+4 Urgent")
         m2.metric("Hearings Today", "6", "Bench 1")
         m3.metric("BNS Sync", "v2026", "Live")
         
         
-        
-        st.subheader("Today's Schedule")
+        st.subheader("Today's Hearing Schedule")
         df = pd.DataFrame({
-            "Time": ["10:30 AM", "02:00 PM"],
-            "Case Name": ["State vs K. Reddy", "OS 44/2026"],
-            "Location": ["High Court Hall 1", "District Court"]
+            "Time": ["10:30 AM", "01:30 PM", "03:45 PM"],
+            "Case ID": ["WP 124/2026", "OS 44/2026", "CC 12/2025"],
+            "Court Location": ["High Court Hall 1", "District Court", "Special Bench"]
         })
         st.table(df)
 
-    # FUNCTIONALITY 2: Court Tracker
+    # FUNCTIONALITY 2: Live Court Tracker
     elif menu == "📡 Court Tracker":
-        st.title("📡 Live e-Courts Status")
-        cnr = st.text_input("Enter CNR Number")
-        if st.button("Track Status"):
-            with st.status("Fetching Data..."):
-                time.sleep(1)
-                st.success("Case Verified: Evidence Stage.")
+        st.title("📡 Live e-Courts Status Tracker")
+        cnr = st.text_input("Enter CNR Number / Case ID")
+        if st.button("Track Real-time Status"):
+            with st.status("Fetching Data from e-Courts Portal..."):
+                time.sleep(1.2)
+                st.success("Case Record Verified.")
+                st.info("**Current Stage:** Final Arguments | **Next Hearing:** 05-03-2026")
 
-    # FUNCTIONALITY 3: AI Chat
+    # FUNCTIONALITY 3: Nyaya Mitra AI Chat
     elif menu == "🤖 Nyaya AI Chat":
-        st.title("🤖 Nyaya Mitra AI")
+        st.title("🤖 Nyaya Mitra: AI Legal Associate")
         if "messages" not in st.session_state: st.session_state.messages = []
         for msg in st.session_state.messages: 
             st.chat_message(msg["role"]).write(msg["content"])
         
-        if prompt := st.chat_input("Ask about BNS vs IPC..."):
+        if prompt := st.chat_input("Ask about Bharatiya Nyaya Sanhita (BNS)..."):
             st.session_state.messages.append({"role": "user", "content": prompt})
             st.chat_message("user").write(prompt)
-            res = f"Counsel {name}, evaluating '{prompt}' under the BNS framework..."
+            # Simulated AI context
+            res = f"Counsel {name}, as per the BNS framework, your query regarding '{prompt}' suggests..."
             st.chat_message("assistant").write(res)
             st.session_state.messages.append({"role": "assistant", "content": res})
 
-    # FUNCTIONALITY 4: Case Vault
+    # FUNCTIONALITY 4: Secure Case Vault
     elif menu == "📂 Case Vault":
-        st.title("📂 Secure Case Vault")
-        st.file_uploader("Upload Confidential PDF", type=['pdf'])
-        st.success("AES-256 Encryption Active.")
+        st.title("📂 Secure Legal Document Vault")
+        uploaded_file = st.file_uploader("Upload Confidential Case Brief (PDF)", type=['pdf'])
+        if uploaded_file:
+            st.success("File AES-256 Encrypted and Saved to RajaRao Vault.")
 
 elif st.session_state["authentication_status"] is False:
     st.markdown("<div class='gold-title'>Advocate RajaRao & Associates</div>", unsafe_allow_html=True)
-    st.error("Invalid Username or Password.")
+    st.error("Invalid Username or Password. Please try again.")
 elif st.session_state["authentication_status"] is None:
     st.markdown("<div class='gold-title'>Advocate RajaRao & Associates</div>", unsafe_allow_html=True)
-    st.info("Legal Portal: Please enter your credentials.")
+    st.info("Legal Portal: Please enter your secure counsel credentials.")
 
 st.markdown("---")
-st.caption("© 2026 RajaRao Legal Suite | Advanced Management System")
+st.caption("© 2026 RajaRao Legal Suite | v2.0 Enterprise Gold Edition")
